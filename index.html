@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Margin Reader</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1E5F74">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Margin">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Figtree:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+/* Layout: a quiet reading room — slim tool rail on top, the page centred like a book on a desk, notes arrive in the margin */
+:root{
+  --bg:#E9ECEA; --surface:#F7F8F6; --ink:#1B2528; --muted:#5D6B6E; --line:#CDD4D2;
+  --accent:#1E5F74; --accent-ink:#FFFFFF; --mark:rgba(232,176,48,.38); --ribbon:#B5432F;
+  --heat0:#DCE2E0; --heat1:#B6D0D6; --heat2:#7FAFBC; --heat3:#3F8297; --heat4:#1E5F74;
+  --shadow:0 1px 2px rgba(20,30,34,.08),0 8px 28px rgba(20,30,34,.10);
+  --display:"Newsreader",Georgia,"Times New Roman",serif;
+  --ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121719; --surface:#1A2124; --ink:#E4EAEA; --muted:#93A2A4; --line:#2C3639;
+  --accent:#6FB6CC; --accent-ink:#0E1517; --mark:rgba(232,176,48,.34); --ribbon:#E07A62;
+  --heat0:#232C2F; --heat1:#1F4652; --heat2:#2C6577; --heat3:#4B92A8; --heat4:#7EC4D9;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121719; --surface:#1A2124; --ink:#E4EAEA; --muted:#93A2A4; --line:#2C3639;
+  --accent:#6FB6CC; --accent-ink:#0E1517; --mark:rgba(232,176,48,.34); --ribbon:#E07A62;
+  --heat0:#232C2F; --heat1:#1F4652; --heat2:#2C6577; --heat3:#4B92A8; --heat4:#7EC4D9;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45); color-scheme:dark}
+
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--ui)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Home ---------- */
+#home{max-width:900px;margin:0 auto;padding:clamp(28px,6vw,60px) 16px 56px;display:grid;gap:36px}
+.brand{font:600 13px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:400 clamp(30px,5vw,46px)/1.1 var(--display);margin:10px 0 12px;text-wrap:balance;max-width:20ch}
+h1 em{color:var(--accent)}
+.lede{color:var(--muted);max-width:60ch;margin:0}
+.drop{position:relative;display:grid;place-items:center;gap:6px;text-align:center;padding:34px 16px;border:1.5px dashed var(--line);border-radius:14px;background:var(--surface);cursor:pointer;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop strong{font:600 17px var(--ui)}
+.drop span{color:var(--muted);font-size:13px}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.sec h2{font:600 12px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.shelf ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.book{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;width:100%;text-align:left}
+.book:hover{border-color:var(--accent)}
+.spine{width:44px;height:58px;border-radius:3px 6px 6px 3px;background:var(--accent);opacity:.85;position:relative}
+.spine::after{content:"";position:absolute;left:5px;top:0;bottom:0;width:1px;background:var(--accent-ink);opacity:.35}
+.book b{display:block;font:600 16px/1.3 var(--display);overflow-wrap:anywhere}
+.book small{display:block;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.book .pct{font:600 13px var(--ui);color:var(--accent);font-variant-numeric:tabular-nums}
+.meter{height:3px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+
+/* reading log */
+.log{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:18px}
+.stats{display:flex;flex-wrap:wrap;gap:12px 32px}
+.stat b{display:block;font:600 28px/1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:12.5px}
+.heatwrap{overflow-x:auto;padding-bottom:4px}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);grid-auto-columns:13px;gap:3px;width:max-content}
+.heat i{border-radius:3px;background:var(--heat0)}
+.heat i[data-l="1"]{background:var(--heat1)}.heat i[data-l="2"]{background:var(--heat2)}.heat i[data-l="3"]{background:var(--heat3)}.heat i[data-l="4"]{background:var(--heat4)}
+.heat i.today{outline:1.5px solid var(--ink);outline-offset:1px}
+.heat i.pad{background:transparent}
+.legend{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.days{list-style:none;margin:0;padding:0;display:grid}
+.days li{display:grid;grid-template-columns:110px 70px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;font-variant-numeric:tabular-nums}
+.days li span:last-child{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:480px){.days li{grid-template-columns:90px 60px minmax(0,1fr)}}
+.empty{color:var(--muted);font-size:14px;margin:0}
+
+/* ---------- Reader ---------- */
+#reader{height:100%;display:flex;flex-direction:column}
+.bar{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar .title{flex:1 1 140px;min-width:0;font:600 15px var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.group{display:flex;align-items:center;gap:4px}
+.icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:transparent}
+.icon:hover{border-color:var(--accent);color:var(--accent)}
+.icon:disabled{opacity:.35;cursor:default}
+.icon[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.icon svg{width:16px;height:16px}
+.pageno{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13.5px}
+.pageno input{width:52px;text-align:center;padding:5px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;font-weight:500}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--ribbon);border-color:var(--ribbon);color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13.5px}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.progress{height:3px;background:var(--line)}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.stage{flex:1;overflow:auto;padding:24px 16px 56px}
+.sheet{position:relative;margin:0 auto;background:#fff;box-shadow:var(--shadow);border-radius:2px}
+.sheet canvas{display:block}
+.night .sheet canvas{filter:invert(.9) hue-rotate(180deg)}
+.night .sheet{background:#1a1a1a}
+.marking .textLayer,.marking .textLayer span{cursor:crosshair}
+.notice{max-width:520px;margin:14px auto 0;font-size:13px;color:var(--muted);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;box-shadow:var(--shadow);max-width:calc(100vw - 32px);text-align:center}
+
+/* overlay: highlights + bookmark ribbon */
+.overlay{position:absolute;inset:0;z-index:1;pointer-events:none}
+.overlay .hl{position:absolute;background:var(--mark);border-radius:2px;mix-blend-mode:multiply}
+.night .overlay .hl{mix-blend-mode:screen}
+.overlay .rib{position:absolute;left:-10px;right:-10px;height:0;border-top:2px dashed var(--ribbon)}
+.overlay .rib span{position:absolute;left:0;top:-11px;transform:translateY(-100%);background:var(--ribbon);color:#fff;font:600 11px/1 var(--ui);padding:4px 8px;border-radius:4px 4px 4px 0;white-space:nowrap;letter-spacing:.02em}
+
+/* pdf.js text layer */
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;z-index:2}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer ::selection{background:rgba(30,95,116,.28);color:transparent}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+
+/* ---------- Margin note ---------- */
+.note{position:fixed;z-index:50;width:min(370px,calc(100vw - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px 14px}
+.note .term{font:600 22px/1.2 var(--display);margin:0 30px 0 0;overflow-wrap:anywhere}
+.note .meta{color:var(--muted);font-size:13px;margin:2px 0 8px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.note p{margin:0 0 6px;font:16px/1.45 var(--display)}
+.note .pos{font:italic 14px var(--display);color:var(--accent);margin:8px 0 2px}
+.note .ex{font:13.5px/1.5 var(--ui);color:var(--muted);border-left:2px solid var(--accent);padding-left:10px;margin:2px 0 8px}
+.note .quote{font:italic 15px/1.45 var(--display);color:var(--muted);margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.note .row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:10px}
+.note a{color:var(--accent);font-size:13px}
+.note .x{position:absolute;top:8px;right:8px;width:28px;height:28px;border:0;background:transparent;color:var(--muted);border-radius:6px}
+.note .x:hover{color:var(--ink)}
+.note .defs{max-height:42vh;overflow:auto}
+.dots{display:inline-flex;gap:4px;padding:8px 0}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:b 1s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (max-width:640px){.note{left:16px!important;right:16px;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto}}
+
+/* ---------- Notebook drawer ---------- */
+.drawer{position:fixed;inset:0 0 0 auto;z-index:40;width:min(400px,100vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column}
+.drawer header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px}
+.drawer h3{margin:0;font:600 19px var(--display)}
+.tabs{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:9px 10px;font-size:13.5px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.drawer ul{list-style:none;margin:0;padding:6px 16px 24px;overflow:auto;flex:1}
+.drawer li{padding:12px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:start}
+.drawer li .main{cursor:pointer}
+.drawer li .main:hover b{color:var(--accent)}
+.drawer li b{font:600 16px var(--display);display:block}
+.drawer li q{font:italic 15px/1.45 var(--display);display:block;quotes:"“" "”"}
+.drawer li .sub{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.drawer li .txt{color:var(--muted);font-size:13.5px;display:block}
+.drawer li textarea{grid-column:1/-1;width:100%;min-height:54px;resize:vertical;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px 8px;font-size:13.5px}
+.drawer .empty{padding:18px 0;border:0;display:block}
+.del{border:0;background:transparent;color:var(--muted);font-size:12.5px;padding:2px 4px}
+.del:hover{color:var(--ribbon)}
+/* phones + installed app */
+#home{padding-top:calc(clamp(28px,6vw,60px) + env(safe-area-inset-top,0px));padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+.bar{padding-top:calc(8px + env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.drawer{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.stage{padding-bottom:calc(56px + env(safe-area-inset-bottom,0px));touch-action:pan-x pan-y pinch-zoom}
+.install{font-size:13.5px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.install b{color:var(--ink)}
+@media (max-width:560px){
+  .bar .title{flex:1 1 calc(100% - 50px)}
+  .bar{gap:8px}
+  .icon{width:38px;height:38px}
+  .chip{padding:8px 11px}
+}
+@media (hover:none){.textLayer span{-webkit-touch-callout:default}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<main id="home">
+  <section>
+    <div class="brand">Margin Reader</div>
+    <h1>Read your PDF. <em>Tap a word</em> to understand it.</h1>
+    <p class="lede">Open a book once and it stays on your shelf. Double-click or long-press any word for its definition, mark the exact line where you stop, highlight passages, and see every day you've read.</p>
+  </section>
+
+  <label class="drop" id="drop" for="file">
+    <input type="file" id="file" accept="application/pdf,.pdf">
+    <strong>Open a PDF</strong>
+    <span id="dropMsg">Click to choose a file, or drop it here. It stays in this browser and is never uploaded.</span>
+  </label>
+
+  <p class="install" id="install" hidden></p>
+
+  <section class="sec shelf" id="shelf" hidden>
+    <h2>Your shelf</h2>
+    <ul id="shelfList"></ul>
+  </section>
+
+  <section class="sec">
+    <h2>Reading log</h2>
+    <div class="log">
+      <div class="stats">
+        <div class="stat"><b id="sStreak">0</b><span>day streak</span></div>
+        <div class="stat"><b id="sToday">0 min</b><span>read today</span></div>
+        <div class="stat"><b id="sMonth">0</b><span>days this month</span></div>
+        <div class="stat"><b id="sPages">0</b><span>pages turned, all time</span></div>
+      </div>
+      <div>
+        <div class="heatwrap"><div class="heat" id="heat" aria-label="Reading calendar, last 20 weeks"></div></div>
+        <div class="legend">Less <i style="background:var(--heat0)"></i><i style="background:var(--heat1)"></i><i style="background:var(--heat2)"></i><i style="background:var(--heat3)"></i><i style="background:var(--heat4)"></i> More</div>
+      </div>
+      <div>
+        <ul class="days" id="days"></ul>
+        <p class="empty" id="daysEmpty">Your reading days will appear here. Time counts while a book is open and you're reading.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="reader" hidden>
+  <div class="bar">
+    <button class="icon" id="back" aria-label="Back to shelf" title="Shelf"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg></button>
+    <div class="title" id="title"></div>
+    <div class="group">
+      <button class="icon" id="prev" aria-label="Previous page" title="Previous page (←)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg></button>
+      <div class="pageno"><input id="pageInput" inputmode="numeric" aria-label="Page number"><span>of <span id="total">0</span></span></div>
+      <button class="icon" id="next" aria-label="Next page" title="Next page (→)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m6 3 5 5-5 5"/></svg></button>
+    </div>
+    <div class="group">
+      <button class="icon" id="zoomOut" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h10"/></svg></button>
+      <button class="icon" id="zoomIn" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h10M8 3v10"/></svg></button>
+      <button class="icon" id="nightBtn" aria-pressed="false" aria-label="Night page" title="Night page"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5Z"/></svg></button>
+    </div>
+    <button class="chip" id="markBtn" aria-pressed="false" title="Mark the line where you stop (B)">Mark my line</button>
+    <button class="chip" id="noteBtn">Notebook</button>
+  </div>
+  <div class="progress"><i id="prog" style="width:0"></i></div>
+  <div class="stage" id="stage">
+    <div class="sheet" id="sheet"><canvas id="canvas"></canvas><div class="overlay" id="overlay"></div><div class="textLayer" id="textLayer"></div></div>
+    <p class="notice" id="notice" hidden>This page is a scanned image, so its words can't be selected. Run the PDF through OCR to make the text tappable.</p>
+  </div>
+</div>
+
+<div class="note" id="note" hidden role="dialog" aria-live="polite">
+  <button class="x" id="noteClose" aria-label="Close">✕</button>
+  <div id="noteBody"></div>
+</div>
+
+<aside class="drawer" id="drawer" hidden>
+  <header><h3>Notebook</h3><button class="icon" id="drawerClose" aria-label="Close">✕</button></header>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="marks" aria-selected="true">Bookmarks</button>
+    <button role="tab" data-tab="hls" aria-selected="false">Highlights</button>
+    <button role="tab" data-tab="words" aria-selected="false">Words</button>
+  </div>
+  <ul id="drawerList"></ul>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+/* ================= storage ================= */
+const ls = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+const getLib = () => ls.get("mr.library", []);
+const setLib = l => ls.set("mr.library", l);
+const getWords = () => ls.get("mr.words", []);
+const setWords = w => ls.set("mr.words", w);
+const getLog = () => ls.get("mr.log", {});
+const setLog = l => ls.set("mr.log", l);
+const getData = id => ls.get("mr.book." + id, { marks: [], hls: [] });
+const setData = (id, d) => ls.set("mr.book." + id, d);
+
+function idb(){
+  return new Promise((res, rej) => {
+    try{
+      const r = indexedDB.open("margin-reader", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("books");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }catch(e){ rej(e); }
+  });
+}
+async function idbPut(key, val){ const db = await idb(); return new Promise((res, rej) => { const t = db.transaction("books","readwrite"); t.objectStore("books").put(val, key); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function idbGet(key){ const db = await idb(); return new Promise((res, rej) => { const r = db.transaction("books").objectStore("books").get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+
+/* ================= dates ================= */
+const dkey = (d = new Date()) => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+const fromKey = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y, m-1, d); };
+const fmtDay = k => fromKey(k).toLocaleDateString(undefined, { weekday:"short", day:"numeric", month:"short" });
+const fmtShort = ts => new Date(ts).toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
+const fmtMin = s => { const m = Math.round(s / 60); return m < 60 ? m + " min" : Math.floor(m/60) + " h " + (m % 60) + " min"; };
+
+function toast(msg, ms = 2600){
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, ms);
+}
+
+/* ================= reading log ================= */
+let lastActive = Date.now();
+["mousemove","keydown","scroll","touchstart","wheel","click"].forEach(ev =>
+  document.addEventListener(ev, () => lastActive = Date.now(), { passive:true, capture:true }));
+const TICK = 15;
+setInterval(() => {
+  if($("#reader").hidden || document.hidden || !book) return;
+  if(Date.now() - lastActive > 3 * 60 * 1000) return; // idle: stop counting
+  const log = getLog(), k = dkey();
+  const day = log[k] || { sec:0, pages:0, books:[] };
+  day.sec += TICK;
+  if(!day.books.includes(book.name)) day.books.push(book.name);
+  log[k] = day; setLog(log);
+}, TICK * 1000);
+function logPageTurn(){
+  const log = getLog(), k = dkey();
+  const day = log[k] || { sec:0, pages:0, books:[] };
+  day.pages++;
+  if(book && !day.books.includes(book.name)) day.books.push(book.name);
+  log[k] = day; setLog(log);
+}
+const readDay = d => d && (d.sec >= 60 || d.pages > 0);
+
+function renderLog(){
+  const log = getLog(), today = new Date(), tk = dkey(today);
+  // streak
+  let streak = 0; const c = new Date(today);
+  if(!readDay(log[tk])) c.setDate(c.getDate() - 1);
+  while(readDay(log[dkey(c)])){ streak++; c.setDate(c.getDate() - 1); }
+  $("#sStreak").textContent = streak;
+  $("#sToday").textContent = fmtMin(log[tk]?.sec || 0);
+  const mPrefix = tk.slice(0, 7);
+  $("#sMonth").textContent = Object.keys(log).filter(k => k.startsWith(mPrefix) && readDay(log[k])).length;
+  $("#sPages").textContent = Object.values(log).reduce((a, d) => a + (d.pages || 0), 0);
+
+  // heatmap: 20 weeks, columns = weeks starting Monday
+  const heat = $("#heat"); heat.innerHTML = "";
+  const weeks = 20;
+  const start = new Date(today); const dow = (today.getDay() + 6) % 7; // Mon=0
+  start.setDate(today.getDate() - dow - (weeks - 1) * 7);
+  for(let i = 0; i < weeks * 7; i++){
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const cell = document.createElement("i");
+    if(d > today){ cell.className = "pad"; heat.appendChild(cell); continue; }
+    const k = dkey(d), e = log[k];
+    const min = e ? e.sec / 60 : 0;
+    const l = !readDay(e) ? 0 : min < 10 ? 1 : min < 25 ? 2 : min < 50 ? 3 : 4;
+    cell.dataset.l = l;
+    if(k === tk) cell.classList.add("today");
+    cell.title = fmtDay(k) + (e ? ` · ${fmtMin(e.sec)} · ${e.pages} pages` : " · no reading");
+    heat.appendChild(cell);
+  }
+  // recent days
+  const keys = Object.keys(log).filter(k => readDay(log[k])).sort().reverse().slice(0, 7);
+  const ul = $("#days"); ul.innerHTML = "";
+  $("#daysEmpty").hidden = keys.length > 0;
+  keys.forEach(k => {
+    const e = log[k]; const li = document.createElement("li");
+    li.innerHTML = "<span></span><span></span><span></span>";
+    li.children[0].textContent = k === tk ? "Today" : fmtDay(k);
+    li.children[1].textContent = fmtMin(e.sec);
+    li.children[2].textContent = `${e.pages} pages · ${e.books.join(", ")}`;
+    ul.appendChild(li);
+  });
+}
+
+/* ================= shelf ================= */
+function renderShelf(){
+  const lib = getLib().sort((a,b) => (b.opened||0) - (a.opened||0));
+  $("#shelf").hidden = !lib.length;
+  const ul = $("#shelfList"); ul.innerHTML = "";
+  lib.forEach(b => {
+    const data = getData(b.id);
+    const mark = data.marks[0];
+    const li = document.createElement("li");
+    const btn = document.createElement("button"); btn.className = "book";
+    const pct = b.pages ? Math.round((b.page / b.pages) * 100) : 0;
+    btn.innerHTML = `<div class="spine"></div><div style="min-width:0"><b></b><small class="l1"></small><small class="l2"></small><div class="meter"><i style="width:${pct}%"></i></div></div><span class="pct">${pct}%</span>`;
+    btn.querySelector("b").textContent = b.name;
+    btn.querySelector(".l1").textContent = mark
+      ? `Your line is marked on page ${mark.page} of ${b.pages || "?"}`
+      : `Continue on page ${b.page} of ${b.pages || "?"}`;
+    btn.querySelector(".l2").textContent = `Last read ${fmtShort(b.opened)}` + (data.hls.length ? ` · ${data.hls.length} highlights` : "");
+    btn.onclick = () => resume(b);
+    li.appendChild(btn); ul.appendChild(li);
+  });
+}
+async function resume(b){
+  let blob = null;
+  try{ blob = await idbGet(b.id); }catch{}
+  if(blob) openBook(b.id, b.name, blob);
+  else { $("#dropMsg").textContent = `Choose "${b.name}" again to continue. Your place and notes are saved.`; $("#file").click(); }
+}
+
+/* ================= open ================= */
+$("#file").addEventListener("change", e => { const f = e.target.files[0]; if(f) openFile(f); e.target.value = ""; });
+const drop = $("#drop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { const f = [...e.dataTransfer.files].find(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)); if(f) openFile(f); });
+
+async function openFile(file){
+  const id = file.name + "|" + file.size;
+  try{ await idbPut(id, file); }catch{}
+  openBook(id, file.name.replace(/\.pdf$/i, ""), file);
+}
+
+let pdf = null, book = null, page = 1, zoom = 1, busy = false, again = false, scrollToMark = false;
+async function openBook(id, name, blob){
+  $("#home").hidden = true; $("#reader").hidden = false;
+  $("#title").textContent = name;
+  $("#sheet").style.visibility = "hidden";
+  try{
+    const data = new Uint8Array(await blob.arrayBuffer());
+    pdf = await pdfjsLib.getDocument({ data, isEvalSupported:false }).promise;
+  }catch(err){
+    $("#reader").hidden = true; $("#home").hidden = false;
+    $("#dropMsg").textContent = "That file couldn't be opened. Make sure it's a PDF that isn't password-protected.";
+    return;
+  }
+  const lib = getLib();
+  let entry = lib.find(b => b.id === id);
+  if(!entry){ entry = { id, name, page:1 }; lib.push(entry); }
+  entry.pages = pdf.numPages; entry.opened = Date.now();
+  setLib(lib); book = entry;
+  const mark = getData(id).marks[0];
+  page = Math.min(Math.max(1, mark ? mark.page : (entry.page || 1)), pdf.numPages);
+  scrollToMark = !!mark;
+  zoom = ls.get("mr.zoom", 1);
+  $("#total").textContent = pdf.numPages;
+  await render();
+  if(mark) toast(`Back to your line on page ${mark.page}, marked ${fmtShort(mark.date)}`);
+}
+
+/* ================= render ================= */
+async function render(){
+  if(busy){ again = true; return; }
+  busy = true; hideNote();
+  try{
+    const p = await pdf.getPage(page);
+    const base = p.getViewport({ scale:1 });
+    const stage = $("#stage");
+    const avail = Math.min(stage.clientWidth - 32, 900);
+    const scale = Math.max(.3, (avail / base.width) * zoom);
+    const vp = p.getViewport({ scale });
+    const dpr = window.devicePixelRatio || 1;
+    const canvas = $("#canvas"), sheet = $("#sheet"), tl = $("#textLayer");
+    canvas.width = Math.floor(vp.width * dpr); canvas.height = Math.floor(vp.height * dpr);
+    canvas.style.width = vp.width + "px"; canvas.style.height = vp.height + "px";
+    sheet.style.width = vp.width + "px"; sheet.style.height = vp.height + "px";
+    sheet.style.setProperty("--scale-factor", scale);
+    await p.render({ canvasContext: canvas.getContext("2d"), viewport: vp, transform: dpr !== 1 ? [dpr,0,0,dpr,0,0] : null }).promise;
+    tl.innerHTML = "";
+    const tc = await p.getTextContent();
+    await pdfjsLib.renderTextLayer({ textContentSource: tc, container: tl, viewport: vp, textDivs: [] }).promise;
+    $("#notice").hidden = tc.items.some(i => i.str && i.str.trim());
+    drawOverlay();
+    sheet.style.visibility = "visible";
+  }catch(e){ console.error(e); }
+  $("#pageInput").value = page;
+  $("#prev").disabled = page <= 1; $("#next").disabled = page >= pdf.numPages;
+  $("#prog").style.width = (page / pdf.numPages * 100) + "%";
+  const lib = getLib(); const e = lib.find(b => b.id === book.id);
+  if(e){ e.page = page; e.opened = Date.now(); setLib(lib); book = e; }
+  if(scrollToMark){ scrollToMark = false; const r = $("#overlay .rib"); if(r) r.scrollIntoView({ block:"center" }); }
+  busy = false;
+  if(again){ again = false; render(); }
+}
+function drawOverlay(){
+  const ov = $("#overlay"); ov.innerHTML = "";
+  const d = getData(book.id);
+  d.hls.filter(h => h.page === page).forEach(h => h.rects.forEach(([x,y,w,hh]) => {
+    const el = document.createElement("div"); el.className = "hl";
+    el.style.cssText = `left:${x*100}%;top:${y*100}%;width:${w*100}%;height:${hh*100}%`;
+    ov.appendChild(el);
+  }));
+  const m = d.marks.find(m => m.page === page);
+  if(m){
+    const r = document.createElement("div"); r.className = "rib"; r.style.top = (m.y * 100) + "%";
+    r.innerHTML = "<span></span>";
+    r.firstChild.textContent = (m === d.marks[0] ? "You stopped here · " : "Bookmark · ") + fmtShort(m.date);
+    ov.appendChild(r);
+  }
+}
+function go(n, keepScroll){
+  if(!pdf) return;
+  n = Math.min(Math.max(1, n), pdf.numPages);
+  if(n === page) return;
+  if(n === page + 1) logPageTurn();
+  page = n; if(!keepScroll) $("#stage").scrollTop = 0; render();
+}
+$("#prev").onclick = () => go(page - 1);
+$("#next").onclick = () => go(page + 1);
+$("#pageInput").addEventListener("change", e => { const n = parseInt(e.target.value, 10); if(n) go(n); else e.target.value = page; });
+$("#zoomIn").onclick = () => { zoom = Math.min(3, +(zoom + .15).toFixed(2)); ls.set("mr.zoom", zoom); render(); };
+$("#zoomOut").onclick = () => { zoom = Math.max(.5, +(zoom - .15).toFixed(2)); ls.set("mr.zoom", zoom); render(); };
+$("#back").onclick = () => { hideNote(); setMarking(false); $("#drawer").hidden = true; $("#reader").hidden = true; $("#home").hidden = false; renderShelf(); renderLog(); };
+function setNight(on){ document.body.classList.toggle("night", on); $("#nightBtn").setAttribute("aria-pressed", on); ls.set("mr.night", on); }
+$("#nightBtn").onclick = () => setNight(!document.body.classList.contains("night"));
+setNight(ls.get("mr.night", false));
+let rz; window.addEventListener("resize", () => { if(!pdf || $("#reader").hidden) return; clearTimeout(rz); rz = setTimeout(render, 200); });
+document.addEventListener("keydown", e => {
+  if($("#reader").hidden || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  if(e.key === "ArrowRight" || e.key === "PageDown"){ go(page + 1); e.preventDefault(); }
+  if(e.key === "ArrowLeft" || e.key === "PageUp"){ go(page - 1); e.preventDefault(); }
+  if(e.key === "b" || e.key === "B") setMarking(!marking);
+  if(e.key === "Escape"){ hideNote(); setMarking(false); $("#drawer").hidden = true; }
+});
+
+/* ================= mark my line ================= */
+let marking = false;
+function setMarking(on){
+  marking = on; $("#markBtn").setAttribute("aria-pressed", on);
+  $("#reader").classList.toggle("marking", on);
+  if(on){ hideNote(); toast("Click the line where you stopped reading", 3500); }
+}
+$("#markBtn").onclick = () => setMarking(!marking);
+$("#sheet").addEventListener("click", e => {
+  if(!marking) return;
+  e.preventDefault(); e.stopPropagation();
+  const r = $("#sheet").getBoundingClientRect();
+  const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  const d = getData(book.id);
+  d.marks = d.marks.filter(m => m.page !== page);  // one mark per page
+  d.marks.unshift({ page, y, date: Date.now() });   // newest first = where you stopped
+  setData(book.id, d);
+  window.getSelection()?.removeAllRanges();
+  setMarking(false); drawOverlay();
+  toast(`Line marked on page ${page}. You'll come back to it next time.`);
+}, true);
+
+/* ================= selection → define / highlight ================= */
+let lastKey = "", selTimer, currentSel = null;
+document.addEventListener("selectionchange", () => {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(checkSelection, 380);
+});
+function checkSelection(){
+  if(marking) return;
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+  if(!node || !node.closest("#textLayer")) return;
+  const raw = sel.toString().replace(/\s+/g, " ").trim();
+  if(raw.length < 2) return;
+  const range = sel.getRangeAt(0);
+  currentSel = { text: raw, rects: rectsOf(range) };
+  const term = raw.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "");
+  const key = page + ":" + raw.toLowerCase();
+  if(key === lastKey && !$("#note").hidden) return;
+  lastKey = key;
+  const rect = range.getBoundingClientRect();
+  if(/^[\p{L}'’-]+$/u.test(term) && term.length >= 2) define(term, rect);
+  else showHighlightOnly(raw, rect);
+}
+function rectsOf(range){
+  const s = $("#sheet").getBoundingClientRect();
+  const out = [];
+  [...range.getClientRects()].forEach(r => {
+    if(r.width < 2 || r.height < 2) return;
+    const x = (r.left - s.left) / s.width, y = (r.top - s.top) / s.height, w = r.width / s.width, h = r.height / s.height;
+    // merge with a rect on the same line
+    const prev = out.find(o => Math.abs(o[1] - y) < h * .5 && Math.abs(o[3] - h) < h * .5 && x <= o[0] + o[2] + .01);
+    if(prev){ const right = Math.max(prev[0] + prev[2], x + w); prev[0] = Math.min(prev[0], x); prev[2] = right - prev[0]; }
+    else out.push([x, y, w, h]);
+  });
+  return out;
+}
+function addHighlight(){
+  if(!currentSel || !currentSel.rects.length) return;
+  const d = getData(book.id);
+  d.hls.unshift({ page, rects: currentSel.rects, text: currentSel.text.slice(0, 600), note: "", date: Date.now() });
+  setData(book.id, d);
+  window.getSelection()?.removeAllRanges();
+  hideNote(); drawOverlay(); toast("Highlighted. Find it in Notebook → Highlights.");
+}
+
+function placeNote(rect){
+  const n = $("#note"); n.hidden = false;
+  if(window.innerWidth <= 640) return;
+  const w = n.offsetWidth, h = n.offsetHeight;
+  const left = Math.min(Math.max(16, rect.left + rect.width/2 - w/2), window.innerWidth - w - 16);
+  let top = rect.bottom + 10;
+  if(top + h > window.innerHeight - 16) top = Math.max(16, rect.top - h - 10);
+  n.style.left = left + "px"; n.style.top = top + "px";
+}
+function hideNote(){ $("#note").hidden = true; lastKey = ""; }
+$("#noteClose").onclick = hideNote;
+document.addEventListener("pointerdown", e => { if(!$("#note").hidden && !e.target.closest("#note") && !e.target.closest("#textLayer")) hideNote(); });
+
+function showHighlightOnly(text, rect){
+  const body = $("#noteBody");
+  body.innerHTML = `<p class="quote"></p><div class="row"><button class="btn" id="hlBtn">Highlight</button><button class="btn ghost" id="copyBtn">Copy</button></div>`;
+  body.querySelector(".quote").textContent = "“" + text + "”";
+  $("#hlBtn").onclick = addHighlight;
+  $("#copyBtn").onclick = () => { navigator.clipboard?.writeText(text).then(() => toast("Copied"), () => toast("Couldn't copy. Use Ctrl+C instead.")); };
+  placeNote(rect);
+}
+
+/* ================= dictionary (free, needs internet) ================= */
+const cache = new Map();
+/* Two free sources, raced in parallel, each with a timeout.
+   Result shape: { word, ipa, audio, groups:[{pos, defs:[{definition, example}]}] } */
+function timed(url, ms = 6000){
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  return fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t));
+}
+const stripHtml = h => { const d = document.createElement("div"); d.innerHTML = h || ""; return d.textContent.replace(/\s+/g, " ").trim(); };
+
+// Source 1: Wiktionary (Wikimedia REST API, CORS-enabled)
+async function wiktionary(word, depth = 0){
+  const r = await timed("https://en.wiktionary.org/api/rest_v1/page/definition/" + encodeURIComponent(word) + "?redirect=true");
+  if(!r.ok) return null;
+  const j = await r.json();
+  const en = j.en || [];
+  const groups = []; let lemma = null;
+  en.forEach(sec => {
+    const defs = [];
+    (sec.definitions || []).forEach(d => {
+      const html = d.definition || "";
+      const text = stripHtml(html);
+      if(!text) return;
+      // "plural of X", "past tense of X", "third-person singular … of X" → remember X
+      if(/\b(form|plural|tense|participle|singular|comparative|superlative|spelling) of\b/i.test(text)){
+        const m = html.match(/<a[^>]*title="([^"#]+)"/);
+        if(m && !lemma) lemma = m[1];
+      }
+      const ex = (d.parsedExamples && d.parsedExamples[0] && d.parsedExamples[0].example) || (d.examples && d.examples[0]) || "";
+      defs.push({ definition: text, example: stripHtml(ex) });
+    });
+    if(defs.length) groups.push({ pos: (sec.partOfSpeech || "").toLowerCase(), defs });
+  });
+  const allForms = groups.length && groups.every(g => g.defs.every(d => /\bof\b/.test(d.definition) && d.definition.split(" ").length < 14));
+  if(lemma && depth === 0 && allForms){
+    const base = await wiktionary(lemma, 1).catch(() => null);
+    if(base){ base.formOf = word; return base; }
+  }
+  return groups.length ? { word, ipa:"", audio:"", groups } : null;
+}
+
+// Source 2: Free Dictionary API (dictionaryapi.dev)
+async function freeDict(word){
+  let r;
+  try{ r = await timed("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word)); }
+  catch(e){ return null; } // its "not found" replies are blocked by the browser; treat as missing
+  if(!r.ok) return null;
+  const j = await r.json();
+  if(!Array.isArray(j) || !j.length) return null;
+  const groups = [];
+  j.forEach(e => (e.meanings || []).forEach(m => {
+    let g = groups.find(x => x.pos === m.partOfSpeech);
+    if(!g){ g = { pos: m.partOfSpeech, defs: [] }; groups.push(g); }
+    (m.definitions || []).forEach(d => g.defs.push({ definition: d.definition, example: d.example || "" }));
+  }));
+  return {
+    word: j[0].word || word,
+    ipa: j.map(e => e.phonetic || (e.phonetics || []).find(p => p.text)?.text).find(Boolean) || "",
+    audio: j.flatMap(e => e.phonetics || []).map(p => p.audio).find(Boolean) || "",
+    groups
+  };
+}
+const orNull = p => p.catch(() => null);
+const firstHit = ps => new Promise(res => {
+  let left = ps.length; if(!left) return res(null);
+  ps.forEach(p => orNull(p).then(v => { if(v && v.groups && v.groups.length) res(v); else if(--left === 0) res(null); }));
+});
+function baseForms(w){
+  const out = [];
+  const add = x => { if(x && x.length > 1 && x !== w && !out.includes(x)) out.push(x); };
+  if(/[’']s$/.test(w)) add(w.slice(0,-2));
+  if(/ies$/.test(w) || /ied$/.test(w)) add(w.slice(0,-3) + "y");
+  if(/(ches|shes|sses|xes|zes|oes)$/.test(w)) add(w.slice(0,-2));
+  if(/s$/.test(w) && !/ss$/.test(w)) add(w.slice(0,-1));
+  if(/ed$/.test(w)){ add(w.slice(0,-2)); add(w.slice(0,-1)); if(/(.)\1ed$/.test(w)) add(w.slice(0,-3)); }
+  if(/ing$/.test(w)){ add(w.slice(0,-3)); add(w.slice(0,-3) + "e"); if(/(.)\1ing$/.test(w)) add(w.slice(0,-4)); }
+  if(/ily$/.test(w)) add(w.slice(0,-3) + "y");
+  if(/ly$/.test(w)) add(w.slice(0,-2));
+  if(/est$/.test(w)){ add(w.slice(0,-3)); add(w.slice(0,-2)); }
+  if(/er$/.test(w)){ add(w.slice(0,-2)); add(w.slice(0,-1)); }
+  return out;
+}
+async function lookup(term){
+  const w = term.toLowerCase().replace(/’/g, "'");
+  // 1) exact word from both sources at once
+  let hit = await firstHit([wiktionary(w), freeDict(w)]);
+  if(hit) return hit;
+  // 2) base forms ("walked" → "walk"), all in parallel
+  const forms = baseForms(w).slice(0, 4);
+  hit = await firstHit(forms.flatMap(f => [wiktionary(f), freeDict(f)]));
+  if(hit){ hit.formOf = w; return hit; }
+  // 3) capitalised (names, places: "Miletus")
+  if(term[0] !== term[0].toUpperCase() || term === w) {
+    const cap = w[0].toUpperCase() + w.slice(1);
+    hit = await orNull(wiktionary(cap));
+    if(hit) return hit;
+  }
+  return null;
+}
+function lookupLinks(term){
+  const q = encodeURIComponent(term.toLowerCase());
+  return `<a href="https://www.google.com/search?q=define+${q}" target="_blank" rel="noopener">Google</a><a href="https://www.merriam-webster.com/dictionary/${q}" target="_blank" rel="noopener">Merriam-Webster</a>`;
+}
+async function define(term, rect){
+  const body = $("#noteBody");
+  body.innerHTML = `<h4 class="term"></h4><div class="dots"><i></i><i></i><i></i></div>`;
+  body.querySelector(".term").textContent = term;
+  placeNote(rect);
+  const myKey = lastKey, ck = term.toLowerCase();
+  try{
+    if(!navigator.onLine) throw { code:"offline" };
+    let d = cache.get(ck);
+    if(d === undefined){ d = await lookup(term); cache.set(ck, d); }
+    if(lastKey !== myKey) return;
+    if(!d) throw { code:"notfound" };
+    showDef(term, d, rect);
+  }catch(err){
+    if(lastKey !== myKey) return;
+    const c = err && err.code;
+    const msg = c === "offline" ? "You're offline. Connect to the internet to see definitions."
+      : c === "notfound" ? "No definition found. It may be a name or a rare word, or the dictionary couldn't be reached. Try the links below."
+      : c === "rate_limited" ? "Too many lookups at once. Wait a moment and try again."
+      : "The definition didn't load. Check your connection and try again.";
+    body.innerHTML = `<h4 class="term"></h4><p class="meta"></p><div class="row"><button class="btn" id="hlBtn">Highlight</button>${lookupLinks(term)}</div>`;
+    body.querySelector(".term").textContent = term;
+    body.querySelector(".meta").textContent = msg;
+    $("#hlBtn").onclick = addHighlight;
+    placeNote(rect);
+  }
+}
+function showDef(term, res, rect){
+  const body = $("#noteBody");
+  const word = res.word || term;
+  const ipa = (res.formOf && res.formOf !== word.toLowerCase() ? `from “${res.formOf}” ` : "") + (res.ipa || "");
+  const audio = res.audio || "";
+  const groups = res.groups;
+  body.innerHTML = `<h4 class="term"></h4><div class="meta"><span class="ipa"></span></div><div class="defs"></div>
+    <div class="row"><button class="btn" id="saveWord">Save word</button><button class="btn ghost" id="hlBtn">Highlight</button>${lookupLinks(word)}</div>`;
+  body.querySelector(".term").textContent = word;
+  body.querySelector(".ipa").textContent = ipa;
+  if(audio){
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = "▶ Listen"; b.style.padding = "3px 10px";
+    b.onclick = () => { try{ new Audio(audio.startsWith("//") ? "https:" + audio : audio).play(); }catch{} };
+    body.querySelector(".meta").appendChild(b);
+  }
+  const box = body.querySelector(".defs");
+  groups.slice(0, 3).forEach(g => {
+    const h = document.createElement("div"); h.className = "pos"; h.textContent = g.pos; box.appendChild(h);
+    g.defs.slice(0, 2).forEach((d, i) => {
+      const p = document.createElement("p");
+      p.textContent = (g.defs.length > 1 ? (i + 1) + ". " : "") + d.definition;
+      box.appendChild(p);
+      if(d.example){ const ex = document.createElement("div"); ex.className = "ex"; ex.textContent = "“" + d.example + "”"; box.appendChild(ex); }
+    });
+  });
+  const firstDef = groups[0]?.defs[0]?.definition || "";
+  const sb = $("#saveWord");
+  if(getWords().some(w => w.word.toLowerCase() === word.toLowerCase())){ sb.textContent = "Saved"; sb.disabled = true; }
+  sb.onclick = () => {
+    const w = getWords();
+    w.unshift({ word, meaning: firstDef, book: book ? book.name : "", page, date: Date.now() });
+    setWords(w); sb.textContent = "Saved"; sb.disabled = true;
+  };
+  $("#hlBtn").onclick = addHighlight;
+  placeNote(rect);
+}
+
+/* ================= notebook ================= */
+let tab = "marks";
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { tab = b.dataset.tab; renderDrawer(); });
+$("#noteBtn").onclick = () => { hideNote(); renderDrawer(); $("#drawer").hidden = false; };
+$("#drawerClose").onclick = () => { $("#drawer").hidden = true; };
+function jump(p){ $("#drawer").hidden = true; if(p === page){ scrollToMark = true; render(); } else { scrollToMark = true; go(p); } }
+function renderDrawer(){
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  const ul = $("#drawerList"); ul.innerHTML = "";
+  const empty = t => { const li = document.createElement("li"); li.className = "empty"; li.textContent = t; ul.appendChild(li); };
+  const d = getData(book.id);
+  if(tab === "marks"){
+    if(!d.marks.length) return empty("No bookmarks yet. Press Mark my line, then click the line where you stop.");
+    d.marks.forEach((m, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="main"><b></b><span class="sub"></span></div><button class="del">Remove</button>`;
+      li.querySelector("b").textContent = (i === 0 ? "Where you stopped · " : "") + "Page " + m.page;
+      li.querySelector(".sub").textContent = "Marked " + fmtShort(m.date);
+      li.querySelector(".main").onclick = () => jump(m.page);
+      li.querySelector(".del").onclick = () => { const x = getData(book.id); x.marks.splice(i, 1); setData(book.id, x); drawOverlay(); renderDrawer(); };
+      ul.appendChild(li);
+    });
+  } else if(tab === "hls"){
+    if(!d.hls.length) return empty("No highlights yet. Select a sentence on the page and choose Highlight.");
+    d.hls.forEach((h, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="main"><q></q><span class="sub"></span></div><button class="del">Remove</button><textarea placeholder="Add a note…" aria-label="Note for this highlight"></textarea>`;
+      li.querySelector("q").textContent = h.text;
+      li.querySelector(".sub").textContent = `Page ${h.page} · ${fmtShort(h.date)}`;
+      const ta = li.querySelector("textarea"); ta.value = h.note || ""; ta.id = "hlnote-" + h.date;
+      ta.oninput = () => { const x = getData(book.id); if(x.hls[i]){ x.hls[i].note = ta.value; setData(book.id, x); } };
+      li.querySelector(".main").onclick = () => jump(h.page);
+      li.querySelector(".del").onclick = () => { const x = getData(book.id); x.hls.splice(i, 1); setData(book.id, x); drawOverlay(); renderDrawer(); };
+      ul.appendChild(li);
+    });
+  } else {
+    const w = getWords();
+    if(!w.length) return empty("No saved words yet. Look up a word and choose Save word.");
+    w.forEach((x, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div><b></b><span class="txt"></span><span class="sub"></span></div><button class="del">Remove</button>`;
+      li.querySelector("b").textContent = x.word;
+      li.querySelector(".txt").textContent = x.meaning;
+      li.querySelector(".sub").textContent = `${x.book} · p. ${x.page}` + (x.date ? " · " + fmtShort(x.date) : "");
+      li.querySelector(".del").onclick = () => { const all = getWords(); all.splice(i, 1); setWords(all); renderDrawer(); };
+      ul.appendChild(li);
+    });
+  }
+}
+
+/* ================= phone extras ================= */
+// swipe left / right to turn pages (only when the page isn't zoomed in and nothing is selected)
+let tStart = null;
+$("#stage").addEventListener("touchstart", e => {
+  if(e.touches.length !== 1){ tStart = null; return; }
+  const t = e.touches[0]; tStart = { x:t.clientX, y:t.clientY, at:Date.now(), sx:$("#stage").scrollLeft };
+}, { passive:true });
+$("#stage").addEventListener("touchend", e => {
+  if(!tStart || marking) return;
+  const t = e.changedTouches[0], dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+  const stage = $("#stage"), canPan = stage.scrollWidth > stage.clientWidth + 4;
+  const sel = window.getSelection();
+  if(Date.now() - tStart.at < 600 && Math.abs(dx) > 60 && Math.abs(dy) < 50 && !canPan && (!sel || sel.isCollapsed) && $("#note").hidden){
+    go(page + (dx < 0 ? 1 : -1));
+  }
+  tStart = null;
+}, { passive:true });
+
+// keep books and history from being cleared by the phone
+try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch{}
+
+// offline support
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+
+// "Add to Home Screen" hint
+(function(){
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if(standalone) return;
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document), android = /Android/.test(ua);
+  const el = $("#install");
+  if(ios){ el.innerHTML = "<b>Install on iPhone:</b> in Safari, tap the Share button, then <b>Add to Home Screen</b>. It opens like an app and keeps your books safe."; el.hidden = false; }
+  else if(android){ el.innerHTML = "<b>Install on Android:</b> in Chrome, tap ⋮ then <b>Add to Home screen</b> or <b>Install app</b>."; el.hidden = false; }
+  let deferred;
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault(); deferred = e;
+    el.innerHTML = "<b>Install Margin Reader</b> to open it from your home screen. ";
+    const b = document.createElement("button"); b.className = "btn"; b.textContent = "Install app"; b.style.marginLeft = "6px";
+    b.onclick = async () => { deferred.prompt(); await deferred.userChoice; el.hidden = true; };
+    el.appendChild(b); el.hidden = false;
+  });
+})();
+
+renderShelf(); renderLog();
+</script>
+</body>
+</html>
